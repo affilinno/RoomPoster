@@ -1,0 +1,155 @@
+{
+  "cookies": [
+    {
+      "name": "__gpi",
+      "value": "UID=000011fe2d57ae83:T=1770988443:RT=1770988443:S=ALNI_MZpcv9Xpzrh2n-eeZ_Rpw1Q7Dqrqg",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1804684443.0
+    },
+    {
+      "name": "Rg",
+      "value": "1f7680%26167bd8f185cece2fed70fca7161c3304b1242e6a16966f91e6f529ab836a63b59a8dd12bdb034cd65e7ebc698a1aeed13445647b840fb7f61b6ed042a3d92f4d4d0fa7a00fca95c32aef3570bc7a55acde57acbb03dcd8c55690d20d5c840f70924e7ebaec3148a3b72d32e1f27a5468426b9ceb2e0f77bea43004cb9d5f89491b7fca5c0ccc93c3025d1261263d7d58%262026-05-17+10%3A54%3A06",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1786758847.365364
+    },
+    {
+      "name": "__gads",
+      "value": "ID=ff2e765fe1ffe2b1:T=1770988443:RT=1770988443:S=ALNI_MazhbXzBdvb1NAsO2TJASDogdxLZQ",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1804684443.0
+    },
+    {
+      "name": "s_user",
+      "value": "kknlr5vv11dpjaqja1omo7sv50",
+      "domain": "room.rakuten.co.jp",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None",
+      "expires": -1
+    },
+    {
+      "name": "Rmt",
+      "value": "bd7797a93b0204a4f11cc038c6ad39190bc7220be962210c",
+      "domain": "room.rakuten.co.jp",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax",
+      "expires": 1789106882.57968
+    },
+    {
+      "name": "_ra",
+      "value": "1735810084431|3d86152a-1765-45a0-8ae4-b50b362b6865",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1815890891.128019
+    },
+    {
+      "name": "_twpid",
+      "value": "tw.1778982852095.64390759108134194",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Strict",
+      "expires": 1812678852.098249
+    },
+    {
+      "name": "rcxGlobal",
+      "value": "5d9be256-cd9f-4bdb-b1e7-f6eb1adc2035",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1810439801.537069
+    },
+    {
+      "name": "Rp",
+      "value": "5f5747145d5fb8653282081fa567765c241ef73",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1815890891.205259
+    },
+    {
+      "name": "__eoi",
+      "value": "ID=4a8c2b5b3c0ef065:T=1767231722:RT=1770988443:S=AA-Afjaaf_KAAAS5yT3lYhG5qrO6",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1782783722.0
+    },
+    {
+      "name": "cc",
+      "value": "5",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1812866889.093817
+    },
+    {
+      "name": "rat_v",
+      "value": "3899d2ed987e10b3116634d9d046a2cf3c3e7dd0",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1781332691.205604
+    },
+    {
+      "name": "rcx",
+      "value": "5d9be256-cd9f-4bdb-b1e7-f6eb1adc2035",
+      "domain": ".room.rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1807367576.259101
+    },
+    {
+      "name": "Rq",
+      "value": "M01.19&69f93ee1",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1812502239.444367
+    },
+    {
+      "name": "Rz",
+      "value": "A6tmT39ZMHbeCJLt2nXBaDDhIG61Iz8t9au-m74BpLlPMezm8kNWUeLDD5h1dZ5JneVRV2BhfIZeo_YFC7R0sMYnfEOZjjOf5bhu1lqRvtyqZcfgHBlB7SOHrwVqiVMuzjWqYKTHJktg",
+      "domain": ".rakuten.co.jp",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None",
+      "expires": 1785718239.444143
+    }
+  ],
+  "origins": []
+}
