@@ -129,38 +129,27 @@ def post_collect(
     comment: str,
     image_paths: list[str] | None = None,
 ) -> None:
-    """商品URL + コメント(+画像)で「コレ!」投稿する。
+    """ROOMのコレ直リンク(mix/collect?itemcode=...)を開いて「コレ!」投稿する。
 
-    url        : 楽天市場の商品URL(短縮 a.r10.to も可)
+    url        : ROOMのコレ直リンク(GAS側で itemcode を解決済み)
     comment    : コメント本文(改行可)
-    image_paths: 添付する画像のローカルパス(任意・最大1枚を想定)
+    image_paths: 添付する画像のローカルパス(任意)
     """
-    page.goto(config.COLLECT_URL, wait_until="domcontentloaded")
+    # 1) コレ直リンクを開く(コメント入力画面)
+    page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_timeout(3000)  # AngularJS SPA の描画待ち
 
-    # 1) 商品URLを入力 → 取得
-    url_input = _first_visible(page, config.SELECTORS["product_url_input"])
-    url_input.click()
-    url_input.fill(url)
+    # ログイン画面に飛ばされていないか念のため確認
+    cur = page.url.lower()
+    if any(p in cur for p in config.LOGIN_URL_MARKERS):
+        raise RuntimeError(f"コレ画面でログイン画面へ遷移しました(未ログイン)。URL={page.url}")
 
-    try:
-        submit = _first_visible(
-            page, config.SELECTORS["product_url_submit"], timeout=4000
-        )
-        submit.click()
-    except PWTimeout:
-        # ボタンが無いUIでは Enter で確定するケースに対応。
-        url_input.press("Enter")
-
-    # 2) 商品候補が出る場合は先頭を選択
-    if _exists(page, config.SELECTORS["product_candidate"], timeout=5000):
-        _first_visible(page, config.SELECTORS["product_candidate"]).click()
-
-    # 3) コメント入力
+    # 2) コメント入力
     textarea = _first_visible(page, config.SELECTORS["comment_textarea"])
     textarea.click()
     textarea.fill(comment)
 
-    # 4) 画像添付(任意)
+    # 3) 画像添付(任意)
     if image_paths:
         try:
             file_input = page.locator(config.SELECTORS["file_input"][0])
@@ -169,11 +158,11 @@ def post_collect(
         except Exception as e:  # 画像失敗で投稿全体を落とさない
             print(f"[warn] 画像添付に失敗。コメントのみで投稿します: {e}")
 
-    # 5) 投稿実行
+    # 4) 投稿実行
     post_button = _first_visible(page, config.SELECTORS["post_submit"])
     post_button.click()
 
-    # 6) 完了確認(取れなくても致命ではない)
+    # 5) 完了確認(取れなくても致命ではない)
     if _exists(page, config.SELECTORS["post_done"], timeout=8000):
         print("[ok] 投稿完了を確認しました。")
     else:
