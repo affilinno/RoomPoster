@@ -1,0 +1,74 @@
+name: Post to Rakuten ROOM
+
+on:
+  # 定期実行(15分おき)。cron は UTC。予約キュー(schedule.json)を処理。
+  schedule:
+    - cron: "*/15 * * * *"
+  # 手動 / GAS からの起動。url+comment 指定時は単発投稿。
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "楽天市場の商品URL(単発投稿。空なら予約キュー処理)"
+        required: false
+        default: ""
+      comment:
+        description: "コメント本文(リテラル \\n は実改行に変換)"
+        required: false
+        default: ""
+      image:
+        description: "画像URL または リポジトリ内パス(任意)"
+        required: false
+        default: ""
+
+# schedule.json を更新コミットするため write 権限が必要。
+permissions:
+  contents: write
+
+concurrency:
+  group: room-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Post (single)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.url != '' }}
+        env:
+          AUTH_STATE_B64: ${{ secrets.AUTH_STATE_B64 }}
+        run: |
+          ARGS=(--url "${{ inputs.url }}" --comment "${{ inputs.comment }}")
+          if [ -n "${{ inputs.image }}" ]; then
+            ARGS+=(--image "${{ inputs.image }}")
+          fi
+          python post.py "${ARGS[@]}"
+
+      - name: Post (schedule queue)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.url == '' }}
+        env:
+          AUTH_STATE_B64: ${{ secrets.AUTH_STATE_B64 }}
+        run: python post.py
+
+      - name: Commit schedule.json if changed
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.url == '' }}
+        run: |
+          if ! git diff --quiet -- schedule.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add schedule.json
+            git commit -m "chore: update schedule.json [skip ci]"
+            git push
+          else
+            echo "schedule.json に変更なし。"
+          fi
