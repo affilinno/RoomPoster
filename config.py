@@ -25,6 +25,21 @@ SCHEDULE_FILE = ROOT / "schedule.json"
 # HEADLESS=0 で画面ありデバッグ。既定はヘッドレス。
 HEADLESS = os.environ.get("HEADLESS", "1") != "0"
 
+# ROOM_MOBILE=1 でモバイルUA・モバイル表示で動かす。
+# ROOMの「コレ」投稿画面はモバイル向けで、デスクトップUAだと描画されない場合がある。
+MOBILE = os.environ.get("ROOM_MOBILE", "0") != "0"
+
+DESKTOP_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+MOBILE_UA = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/16.5 Mobile/15E148 Safari/604.1"
+)
+
 # 連投検知回避のため、同一実行で複数投稿する際の最小/最大待機秒数。
 MIN_GAP_SEC = int(os.environ.get("MIN_GAP_SEC", "30"))
 MAX_GAP_SEC = int(os.environ.get("MAX_GAP_SEC", "90"))
@@ -69,47 +84,26 @@ SELECTORS = {
         "input[name='u']",
         "form[action*='login']",
     ],
-    # 商品URLを入力する欄。
-    "product_url_input": [
-        "input[placeholder*='URL']",
-        "input[name='itemUrl']",
-        "input[type='url']",
-    ],
-    # 商品URL確定(検索/取得)ボタン。
-    "product_url_submit": [
-        "button:has-text('商品を取得')",
-        "button:has-text('検索')",
-        "button[type='submit']",
-    ],
-    # 取得された商品候補(クリックして確定)。
-    "product_candidate": [
-        ".item-candidate",
-        "[data-testid='item-result']",
-        "li.search-result-item",
-    ],
-    # コメント(感想)入力欄。
+    # コメント(感想)入力欄。mix/collect の実DOMより。
     "comment_textarea": [
-        "textarea[name='comment']",
-        "textarea[placeholder*='コメント']",
-        "textarea[placeholder*='感想']",
-        "textarea",
+        "#collect-content",
+        "textarea[name='content']",
+        "textarea[ng-model='$parent.content']",
     ],
-    # 画像添付の input[type=file]。
+    # 画像添付の input[type=file](ROOMは商品画像が自動。原則未使用)。
     "file_input": [
         "input[type='file']",
     ],
-    # 投稿(コレ!する)実行ボタン。
+    # 投稿(コレ!する)実行ボタン。ng-click=collect()。
     "post_submit": [
-        "button:has-text('コレ！する')",
-        "button:has-text('コレ!する')",
-        "button:has-text('投稿')",
-        "button[type='submit']",
+        "button.collect-btn",
+        "button[ng-click='collect()']",
     ],
-    # 投稿完了を示す要素(トースト・完了画面など)。
+    # 投稿完了を示す要素(収集後に「この商品を削除」リンクが出る)。
     "post_done": [
-        "text=投稿しました",
+        "a[ng-click='deleteCollect()']",
+        ".delete-button",
         "text=コレしました",
-        ".toast-success",
     ],
 }
 
