@@ -47,10 +47,14 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.url != '' }}
         env:
           AUTH_STATE_B64: ${{ secrets.AUTH_STATE_B64 }}
+          # 入力は環境変数経由で渡す(引用符・$・改行・絵文字の混入やインジェクションを防止)
+          IN_URL: ${{ inputs.url }}
+          IN_COMMENT: ${{ inputs.comment }}
+          IN_IMAGE: ${{ inputs.image }}
         run: |
-          ARGS=(--url "${{ inputs.url }}" --comment "${{ inputs.comment }}")
-          if [ -n "${{ inputs.image }}" ]; then
-            ARGS+=(--image "${{ inputs.image }}")
+          ARGS=(--url "$IN_URL" --comment "$IN_COMMENT")
+          if [ -n "$IN_IMAGE" ]; then
+            ARGS+=(--image "$IN_IMAGE")
           fi
           python post.py "${ARGS[@]}"
 
