@@ -44,6 +44,13 @@ MOBILE_UA = (
 MIN_GAP_SEC = int(os.environ.get("MIN_GAP_SEC", "30"))
 MAX_GAP_SEC = int(os.environ.get("MAX_GAP_SEC", "90"))
 
+# 投稿のついでにフィードでランダムに「スキ(いいね)」する件数。0で無効。
+LIKE_COUNT = int(os.environ.get("ROOM_LIKE_COUNT", "10"))
+# スキを回すフィードURL(アイテム一覧)。
+FEED_URL = os.environ.get("ROOM_FEED_URL", "https://room.rakuten.co.jp/items")
+# スキ(いいね)ボタンのセレクタ。isLiked/isDisabled は除外する。
+LIKE_SELECTOR = os.environ.get("ROOM_LIKE_SELECTOR", ".icon-like.right")
+
 # 1要素あたりの待機タイムアウト(ミリ秒)。
 DEFAULT_TIMEOUT_MS = int(os.environ.get("DEFAULT_TIMEOUT_MS", "30000"))
 
