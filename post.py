@@ -19,7 +19,7 @@ import sys
 import time
 
 import config
-from room_client import browser_page, ensure_logged_in, post_collect
+from room_client import browser_page, ensure_logged_in, like_random_items, post_collect
 
 JST = dt.timezone(dt.timedelta(hours=9))
 
@@ -51,6 +51,7 @@ def run_single(url: str, comment: str, images: list[str] | None) -> None:
     with browser_page() as page:
         ensure_logged_in(page)
         post_collect(page, url=url, comment=comment, image_paths=image_paths)
+        like_random_items(page, config.LIKE_COUNT)  # ついでにスキ
     print("[done] 単発投稿を実行しました。")
 
 
@@ -90,6 +91,9 @@ def run_schedule() -> None:
                 print(f"[ok] 投稿: {entry['url']}")
             except Exception as e:
                 print(f"[error] 投稿失敗(スキップ): {entry.get('url')} -> {e}")
+
+        if posted_any:
+            like_random_items(page, config.LIKE_COUNT)  # ついでにスキ
 
     if posted_any:
         config.save_schedule(entries)
