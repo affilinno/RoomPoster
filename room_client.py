@@ -184,31 +184,49 @@ def post_collect(
             f"コメント欄が見つかりません(無効/販売終了のitemcodeの可能性)。URL={page.url}"
         )
 
-    # 3) コメント入力。ヘッダーのオーバーレイ(div.background)がクリックを遮るため、
-    #    pointerクリックを使わず fill + DOMイベント発火で入力する。
+    # 3) コメント入力。オーバーレイ(div.background)がpointerを遮るため click は使わず、
+    #    focus + fill + bubbling input/change で AngularJS の ng-model を確実に更新する。
+    textarea.focus()
     textarea.fill(comment)
-    textarea.dispatch_event("input")
-    textarea.dispatch_event("change")
+    textarea.evaluate(
+        "el => { el.dispatchEvent(new Event('input', {bubbles:true}));"
+        " el.dispatchEvent(new Event('change', {bubbles:true})); }"
+    )
 
-    # 4) 画像添付(任意。ROOMは商品画像が自動なので通常スキップ)
+    # 4) 画像添付(任意)。ROOMは商品画像が自動。input が無ければスキップ(待たない)。
     if image_paths:
-        try:
-            page.locator(config.SELECTORS["file_input"][0]).set_input_files(image_paths)
-            page.wait_for_timeout(2000)
-        except Exception as e:  # 画像失敗で投稿全体を落とさない
-            print(f"[warn] 画像添付に失敗。コメントのみで投稿します: {e}")
+        file_inputs = page.locator(config.SELECTORS["file_input"][0])
+        if file_inputs.count() > 0:
+            try:
+                file_inputs.first.set_input_files(image_paths)
+                page.wait_for_timeout(2000)
+            except Exception as e:
+                print(f"[warn] 画像添付に失敗。コメントのみで投稿します: {e}")
+        else:
+            print("[info] 画像入力欄なし。コメントのみで投稿します。")
 
-    page.wait_for_timeout(500)  # ng-model 反映待ち(ボタンの ng-disabled 解除)
-
-    # 5) 投稿実行。オーバーレイ対策で、通常クリック→ダメなら click イベントを直接発火。
+    # 5) 投稿ボタンの有効化(ng-disabled 解除)を待つ。
     post_button = _first_visible(page, config.SELECTORS["post_submit"])
+    enabled = False
+    for _ in range(12):
+        try:
+            if not post_button.is_disabled():
+                enabled = True
+                break
+        except Exception:
+            break
+        page.wait_for_timeout(500)
+    if not enabled:
+        print("[warn] 投稿ボタンが無効のままです(コメント未反映 or 既にコレ済みの可能性)。")
+
+    # 6) 投稿実行。通常クリック→ダメなら click イベントを直接発火。
     try:
         post_button.click(timeout=5000)
     except Exception:
-        print("[info] 通常クリックが遮られたため、clickイベントを直接発火します。")
+        print("[info] 通常クリックが遮られたため clickイベントを直接発火します。")
         post_button.dispatch_event("click")
 
-    # 6) 完了確認(収集後に「この商品を削除」リンク等が出る)
+    # 7) 完了確認(収集後に「この商品を削除」リンク等が出る)
     if _exists(page, config.SELECTORS["post_done"], timeout=10000):
         print("[ok] コレ完了を確認しました。")
     else:
