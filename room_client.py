@@ -187,6 +187,9 @@ def post_collect(
     if any(p in cur for p in config.LOGIN_URL_MARKERS):
         raise RuntimeError(f"コレ画面でログイン画面へ遷移しました(未ログイン)。URL={page.url}")
 
+    # クリックを遮るオーバーレイ(ヘッダーの div.background 等)を無効化。
+    _hide_overlays(page)
+
     # 2) コメント欄が出ない=無効/販売終了などの商品。投稿せず例外で弾く。
     try:
         textarea = _first_visible(page, config.SELECTORS["comment_textarea"], timeout=8000)
@@ -195,14 +198,13 @@ def post_collect(
             f"コメント欄が見つかりません(無効/販売終了のitemcodeの可能性)。URL={page.url}"
         )
 
-    # 3) コメント入力。オーバーレイ(div.background)がpointerを遮るため click は使わず、
-    #    focus + fill + bubbling input/change で AngularJS の ng-model を確実に更新する。
-    textarea.focus()
+    # 3) コメント入力。実クリックで focus してから入力(AngularJSが確実に反応する方式)。
+    try:
+        textarea.click(timeout=5000)
+    except Exception:
+        _hide_overlays(page)
+        textarea.click(force=True)
     textarea.fill(comment)
-    textarea.evaluate(
-        "el => { el.dispatchEvent(new Event('input', {bubbles:true}));"
-        " el.dispatchEvent(new Event('change', {bubbles:true})); }"
-    )
 
     # 4) 画像添付(任意)。ROOMは商品画像が自動。input が無ければスキップ(待たない)。
     if image_paths:
@@ -218,41 +220,27 @@ def post_collect(
 
     # 5) 投稿ボタンの有効化(ng-disabled 解除)を待つ。
     post_button = _first_visible(page, config.SELECTORS["post_submit"])
-    enabled = False
     for _ in range(12):
         try:
             if not post_button.is_disabled():
-                enabled = True
                 break
         except Exception:
             break
         page.wait_for_timeout(500)
-    if not enabled:
-        print("[warn] 投稿ボタンが無効のままです(コメント未反映 or 既にコレ済みの可能性)。")
 
-    # 6) クリックを遮るオーバーレイを無効化してから実クリック(実クリックでないと
-    #    ROOMのcollect()が確実に発火しないため)。
+    # 6) 実クリックで投稿(オーバーレイを消してから)。
     _hide_overlays(page)
-    clicked = False
-    for _ in range(2):
-        try:
-            post_button.click(timeout=6000)
-            clicked = True
-            break
-        except Exception:
-            _hide_overlays(page)
-            try:
-                post_button.click(force=True, timeout=4000)
-                clicked = True
-                break
-            except Exception:
-                page.wait_for_timeout(500)
-    if not clicked:
-        print("[info] 実クリックが通らないため click イベントを直接発火します。")
-        post_button.dispatch_event("click")
+    try:
+        post_button.click(timeout=6000)
+    except Exception:
+        _hide_overlays(page)
+        post_button.click(force=True, timeout=5000)
 
-    # 7) 完了確認(収集後に「この商品を削除」リンク等が出る)
-    if _exists(page, config.SELECTORS["post_done"], timeout=10000):
+    # 7) 完了確認(再投稿を避けるため開き直さない。その場で判定)。
+    #    成功するとコレ画面から遷移する/「この商品を削除」等が出るので、それで判定。
+    page.wait_for_timeout(3000)
+    if ("mix/collect" not in page.url.lower()
+            or _exists(page, config.SELECTORS["post_done"], timeout=5000)):
         print("[ok] コレ完了を確認しました。")
     else:
         print("[info] 完了マーカー未確認(UI差異の可能性)。送信は実行済みの想定。")
