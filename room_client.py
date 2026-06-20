@@ -22,20 +22,19 @@ import config
 def to_collect_url(url: str) -> str:
     """入力をROOMのコレ直リンク(mix?itemcode=...)に正規化する。
 
-    - ROOMのmix URL → そのまま
+    - ROOMのmix / mix/collect URL → そのまま
     - 楽天市場の商品URL(item.rakuten.co.jp/{shop}/{itemId}/) → itemCode 導出
     - それ以外 → itemCode そのものとみなす
+    mix?itemcode= は ROOM側で数値itemcodeに解決され mix/collect へリダイレクトされる
+    (post_collect でリダイレクト完了を待つ)。
     """
     u = (url or "").strip()
-    # 既に mix/collect ならそのまま
-    if "room.rakuten.co.jp/mix/collect" in u:
+    # 既に ROOM の mix / mix/collect URL ならそのまま
+    if "room.rakuten.co.jp/mix" in u:
         return u
-    # mix?itemcode= は真っ白対策で mix/collect?itemcode= に補正
-    if "room.rakuten.co.jp/mix?" in u:
-        return u.replace("/mix?", "/mix/collect?")
     m = re.search(r"item\.rakuten\.co\.jp/([^/]+)/([^/?#]+)", u)
     code = f"{m.group(1)}:{m.group(2)}" if m else u
-    return f"https://room.rakuten.co.jp/mix/collect?itemcode={quote(code)}&scid=we_room_upc60"
+    return f"https://room.rakuten.co.jp/mix?itemcode={quote(code)}&scid=we_room_upc60"
 
 
 # --- 自動化検知の緩和スクリプト ----------------------------------------------
@@ -214,7 +213,8 @@ def post_collect(
 
     def _on_resp(r):
         try:
-            mm = re.search(r"/api/(\d+)\?api_version=1", r.url)
+            # 商品API: /api/{id}?api_version=1 (id は数値 or shop:itemId のことがある)
+            mm = re.search(r"/api/([^/?]+)\?api_version=1", r.url)
             if mm:
                 item_id["v"] = mm.group(1)
         except Exception:
@@ -222,8 +222,16 @@ def post_collect(
 
     page.on("response", _on_resp)
 
-    # 1) コレ直リンクを開く(コメント入力画面)。
+    # 1) コレ直リンクを開く。mix?itemcode=<shop:番号> は ROOM側で数値itemcodeに
+    #    解決され mix/collect?itemcode=<数値> へリダイレクトされるので、その完了を待つ。
     page.goto(url, wait_until="domcontentloaded")
+    if "mix/collect" not in page.url.lower():
+        for _ in range(3):
+            try:
+                page.wait_for_url("**/mix/collect*", timeout=8000)
+                break
+            except PWTimeout:
+                page.reload(wait_until="domcontentloaded")
     page.wait_for_timeout(4000)  # AngularJS SPA の描画 + id取得待ち
 
     # ログイン画面に飛ばされていないか念のため確認
