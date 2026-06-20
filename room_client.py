@@ -125,6 +125,35 @@ def _hide_overlays(page: Page) -> None:
         pass
 
 
+def _extract_csrf(page: Page) -> str:
+    """ページに埋め込まれた roomUser.csrfToken を取り出す(API確認用)。"""
+    try:
+        m = re.search(r"csrfToken\s*=\s*'([^']+)'", page.content())
+        return m.group(1) if m else ""
+    except Exception:
+        return ""
+
+
+def _is_collected(page: Page, item_id: str, csrf: str):
+    """ROOMの商品API(GET)で is_collected を読む。True/False/None(判定不能)。"""
+    if not item_id or not csrf:
+        return None
+    try:
+        return page.evaluate(
+            "async (a) => {"
+            " try {"
+            "  const r = await fetch('/api/' + a.id + '?api_version=1&csrf_tkn=' + a.csrf,"
+            "   {headers:{Accept:'application/json'}});"
+            "  const j = await r.json();"
+            "  return (j && j.data) ? !!j.data.is_collected : null;"
+            " } catch (e) { return null; }"
+            "}",
+            {"id": item_id, "csrf": csrf},
+        )
+    except Exception:
+        return None
+
+
 def _exists(page: Page, selectors: list[str], timeout: int = 3000) -> bool:
     for sel in selectors:
         try:
@@ -177,10 +206,25 @@ def post_collect(
     comment    : コメント本文(改行可)
     image_paths: 添付する画像のローカルパス(任意)
     """
-    # 1) コレ直リンクを開く(コメント入力画面)。mix?itemcode= は mix/collect へ解決される。
     url = to_collect_url(url)
+
+    # コレ画面はロード時に /api/{数値id}?api_version=1 を叩くので、その数値idを捕捉する
+    # (投稿後に is_collected をAPIで確認するため)。
+    item_id = {"v": None}
+
+    def _on_resp(r):
+        try:
+            mm = re.search(r"/api/(\d+)\?api_version=1", r.url)
+            if mm:
+                item_id["v"] = mm.group(1)
+        except Exception:
+            pass
+
+    page.on("response", _on_resp)
+
+    # 1) コレ直リンクを開く(コメント入力画面)。
     page.goto(url, wait_until="domcontentloaded")
-    page.wait_for_timeout(4000)  # AngularJS SPA の描画 + itemcode解決待ち
+    page.wait_for_timeout(4000)  # AngularJS SPA の描画 + id取得待ち
 
     # ログイン画面に飛ばされていないか念のため確認
     cur = page.url.lower()
@@ -236,14 +280,43 @@ def post_collect(
         _hide_overlays(page)
         post_button.click(force=True, timeout=5000)
 
-    # 7) 完了確認(再投稿を避けるため開き直さない。その場で判定)。
-    #    成功するとコレ画面から遷移する/「この商品を削除」等が出るので、それで判定。
-    page.wait_for_timeout(3000)
-    if ("mix/collect" not in page.url.lower()
-            or _exists(page, config.SELECTORS["post_done"], timeout=5000)):
+    # 7) 完了確認。商品API(GET)で is_collected が true になるまで待つ
+    #    (完了前に次の操作へ移ると収集が中断されるため、ここで確実に待つ)。
+    csrf = _extract_csrf(page)
+
+    def _wait_collected(rounds: int = 15) -> bool:
+        for _ in range(rounds):
+            page.wait_for_timeout(1000)
+            st = _is_collected(page, item_id["v"], csrf)
+            if st is True:
+                return True
+            # APIで判定不能でも、コレ画面から遷移していれば成功とみなす
+            if st is None and "mix/collect" not in page.url.lower():
+                return True
+        return False
+
+    ok = _wait_collected()
+
+    # まだ未収集(API=False)なら、1回だけ再クリック(重複投稿にはならない)。
+    if not ok and _is_collected(page, item_id["v"], csrf) is False:
+        print("[info] 未収集のため投稿ボタンを再クリックします。")
+        _hide_overlays(page)
+        try:
+            post_button.click(timeout=5000)
+        except Exception:
+            try:
+                post_button.click(force=True, timeout=4000)
+            except Exception:
+                post_button.dispatch_event("click")
+        ok = _wait_collected(10)
+
+    if ok:
         print("[ok] コレ完了を確認しました。")
     else:
-        print("[info] 完了マーカー未確認(UI差異の可能性)。送信は実行済みの想定。")
+        print(
+            "[warn] コレ完了を確認できませんでした(未投稿の可能性)。"
+            f"(itemid={item_id['v']} csrf={'あり' if csrf else 'なし'})"
+        )
 
 
 def like_random_items(page: Page, count: int = 10) -> int:
