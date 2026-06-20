@@ -114,6 +114,17 @@ def _first_visible(page: Page, selectors: list[str], timeout: int = 5000):
     raise RuntimeError(f"要素が見つかりません: {selectors}")
 
 
+def _hide_overlays(page: Page) -> None:
+    """クリックを遮るオーバーレイ(ヘッダーの div.background 等)を無効化する。"""
+    try:
+        page.evaluate(
+            "() => { document.querySelectorAll('.background, .modal-backdrop, .overlay')"
+            ".forEach(function(e){ e.style.display='none'; e.style.pointerEvents='none'; }); }"
+        )
+    except Exception:
+        pass
+
+
 def _exists(page: Page, selectors: list[str], timeout: int = 3000) -> bool:
     for sel in selectors:
         try:
@@ -219,11 +230,25 @@ def post_collect(
     if not enabled:
         print("[warn] 投稿ボタンが無効のままです(コメント未反映 or 既にコレ済みの可能性)。")
 
-    # 6) 投稿実行。通常クリック→ダメなら click イベントを直接発火。
-    try:
-        post_button.click(timeout=5000)
-    except Exception:
-        print("[info] 通常クリックが遮られたため clickイベントを直接発火します。")
+    # 6) クリックを遮るオーバーレイを無効化してから実クリック(実クリックでないと
+    #    ROOMのcollect()が確実に発火しないため)。
+    _hide_overlays(page)
+    clicked = False
+    for _ in range(2):
+        try:
+            post_button.click(timeout=6000)
+            clicked = True
+            break
+        except Exception:
+            _hide_overlays(page)
+            try:
+                post_button.click(force=True, timeout=4000)
+                clicked = True
+                break
+            except Exception:
+                page.wait_for_timeout(500)
+    if not clicked:
+        print("[info] 実クリックが通らないため click イベントを直接発火します。")
         post_button.dispatch_event("click")
 
     # 7) 完了確認(収集後に「この商品を削除」リンク等が出る)
