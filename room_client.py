@@ -184,8 +184,8 @@ def post_collect(
             f"コメント欄が見つかりません(無効/販売終了のitemcodeの可能性)。URL={page.url}"
         )
 
-    # 3) コメント入力(Angular の ng-model 反映のため input イベントを発火)
-    textarea.click()
+    # 3) コメント入力。ヘッダーのオーバーレイ(div.background)がクリックを遮るため、
+    #    pointerクリックを使わず fill + DOMイベント発火で入力する。
     textarea.fill(comment)
     textarea.dispatch_event("input")
     textarea.dispatch_event("change")
@@ -198,9 +198,15 @@ def post_collect(
         except Exception as e:  # 画像失敗で投稿全体を落とさない
             print(f"[warn] 画像添付に失敗。コメントのみで投稿します: {e}")
 
-    # 5) 投稿実行。ng-disabled はコメント入力で解除される(click はenabledを自動待機)。
+    page.wait_for_timeout(500)  # ng-model 反映待ち(ボタンの ng-disabled 解除)
+
+    # 5) 投稿実行。オーバーレイ対策で、通常クリック→ダメなら click イベントを直接発火。
     post_button = _first_visible(page, config.SELECTORS["post_submit"])
-    post_button.click()
+    try:
+        post_button.click(timeout=5000)
+    except Exception:
+        print("[info] 通常クリックが遮られたため、clickイベントを直接発火します。")
+        post_button.dispatch_event("click")
 
     # 6) 完了確認(収集後に「この商品を削除」リンク等が出る)
     if _exists(page, config.SELECTORS["post_done"], timeout=10000):
@@ -251,8 +257,8 @@ def like_random_items(page: Page, count: int = 10) -> int:
         while liked < count and i < len(handles):
             h = handles[i]
             try:
-                h.scroll_into_view_if_needed(timeout=2000)
-                h.click(timeout=2000)
+                # ブックマークレットと同様 DOMのclickを発火(オーバーレイの影響を受けない)
+                h.dispatch_event("click")
                 liked += 1
                 page.wait_for_timeout(random.randint(1000, 2000))  # 1〜2秒待機
             except Exception:
